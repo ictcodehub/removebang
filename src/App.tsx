@@ -428,10 +428,10 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <header className="glass-panel" style={{ padding: '20px 30px', border: 'none' }}>
+      <header>
         <div className="brand">
           <div className="brand-logo">
-            <Sparkles size={24} color="white" />
+            <Sparkles size={20} color="white" />
           </div>
           <div className="brand-text">
             <h1 className="neon-text">RemoveBang</h1>
