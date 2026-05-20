@@ -524,7 +524,7 @@ export default function App() {
             <div className="workspace-grid">
               
               {/* Sisi Kiri: Canvas Viewport dengan Split Comparison */}
-              <div className="glass-panel canvas-viewport transparent-checkerboard" style={{ padding: '0px', overflow: 'hidden' }}>
+              <div className="canvas-viewport transparent-checkerboard" style={{ padding: '0px', overflow: 'hidden' }}>
                 
                 {/* Image element tersembunyi untuk input asli */}
                 <img 
