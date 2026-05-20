@@ -833,7 +833,7 @@ export default function App() {
       )}
 
       <footer>
-        <p>© 2026 RemoveBang. Didukung oleh <a href="https://huggingface.co/briaai/RMBG-1.4" target="_blank" rel="noreferrer">Bria AI RMBG-1.4</a> & Transformers.js.</p>
+        <p>© 2026 RemoveBang. Dibuat oleh <strong>Tio (Ajit Prasetiyo)</strong>. Didukung oleh <a href="https://huggingface.co/briaai/RMBG-1.4" target="_blank" rel="noreferrer">Bria AI RMBG-1.4</a> & Transformers.js.</p>
       </footer>
     </div>
   );
