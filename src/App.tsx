@@ -547,8 +547,11 @@ export default function App() {
                   /* Before / After Split Slider */
                   <div className="split-view-container">
                     
-                    {/* Sisi Kiri (Gambar Asli): Ditampilkan di belakang */}
-                    <div className="split-image-left">
+                    {/* Sisi Kiri (Gambar Asli): Ditampilkan di belakang dengan clipPath */}
+                    <div 
+                      className="split-image-left"
+                      style={{ clipPath: `polygon(0 0, ${compareSplit}% 0, ${compareSplit}% 100%, 0 100%)` }}
+                    >
                       <img src={image.url} alt="Original Image" />
                       <div className="image-label-badge label-before">Asli</div>
                     </div>
@@ -791,6 +794,14 @@ export default function App() {
                       <div className="info-label">Mode AI</div>
                       <div className="info-value" style={{ color: 'var(--success)' }}>HD (RMBG-1.4)</div>
                     </div>
+                    {mask && (
+                      <div className="info-item" style={{ gridColumn: 'span 2' }}>
+                        <div className="info-label">Diagnostik Mask</div>
+                        <div className="info-value" style={{ fontSize: '11px', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+                          Len: {mask.data.length} | Dim: {mask.width}x{mask.height} | Min/Max: {Math.min(...Array.from(mask.data.slice(0, 500)))}/{Math.max(...Array.from(mask.data.slice(0, 500)))} | Sample: [{Array.from(mask.data.slice(0, 5)).join(', ')}]
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 
