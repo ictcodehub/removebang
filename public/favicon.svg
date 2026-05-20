@@ -1,46 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
   <defs>
-    <!-- Vibrant premium gradient -->
-    <linearGradient id="fav-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#4f46e5" />
-      <stop offset="100%" stop-color="#0284c7" />
-    </linearGradient>
-    
-    <!-- Mini Checkerboard Pattern -->
-    <pattern id="fav-checker" width="4" height="4" patternUnits="userSpaceOnUse">
+    <pattern id="neutral-checker" width="4" height="4" patternUnits="userSpaceOnUse">
       <rect width="4" height="4" fill="#ffffff" />
       <rect width="2" height="2" fill="#e2e8f0" />
       <rect x="2" y="2" width="2" height="2" fill="#e2e8f0" />
     </pattern>
-    
-    <!-- Left Clip Path (Diagonal) -->
-    <clipPath id="fav-clip-left">
-      <polygon points="2,2 15,2 9,22 2,22" />
-    </clipPath>
-    
-    <!-- Right Clip Path (Diagonal) -->
-    <clipPath id="fav-clip-right">
-      <polygon points="15,2 22,2 22,22 9,22" />
-    </clipPath>
   </defs>
 
-  <!-- Left Side: Gradient Background + Subject -->
-  <g clip-path="url(#fav-clip-left)">
-    <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#fav-grad)" />
-    <circle cx="9" cy="8" r="2.5" fill="white" fill-opacity="0.9" />
-    <path d="M2 17L7 11L13 18H2Z" fill="white" />
-    <path d="M8 18L12 13L16 18H8Z" fill="white" fill-opacity="0.8" />
-  </g>
+  <!-- Base Photo Frame: Rounded Rect in Clean Slate Gray -->
+  <rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="#475569" stroke="#334155" stroke-width="0.75" />
 
-  <!-- Right Side: Checkerboard Background + Subject -->
-  <g clip-path="url(#fav-clip-right)">
-    <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#fav-checker)" stroke="#cbd5e1" stroke-width="0.75" />
-    <circle cx="9" cy="8" r="2.5" fill="#4f46e5" />
-    <path d="M2 17L7 11L13 18H2Z" fill="#312e81" />
-    <path d="M8 18L12 13L16 18H8Z" fill="#4f46e5" />
-  </g>
-  
-  <!-- Diagonal Slider Line (Split line) -->
-  <line x1="15" y1="2" x2="9" y2="22" stroke="white" stroke-width="1.5" />
-  <circle cx="12" cy="12" r="2" fill="white" stroke="#4f46e5" stroke-width="1" />
+  <!-- Cutout Region: Circle in the center filled with checkerboard -->
+  <circle cx="12" cy="12" r="5" fill="url(#neutral-checker)" stroke="#ffffff" stroke-width="1.5" />
 </svg>

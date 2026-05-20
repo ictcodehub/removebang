@@ -433,45 +433,18 @@ export default function App() {
           <div className="brand-logo">
             <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <defs>
-                <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#4f46e5" />
-                  <stop offset="100%" stopColor="#0284c7" />
-                </linearGradient>
-                
-                <pattern id="logo-checker" width="4" height="4" patternUnits="userSpaceOnUse">
+                <pattern id="neutral-checker" width="4" height="4" patternUnits="userSpaceOnUse">
                   <rect width="4" height="4" fill="#ffffff" />
                   <rect width="2" height="2" fill="#e2e8f0" />
                   <rect x="2" y="2" width="2" height="2" fill="#e2e8f0" />
                 </pattern>
-                
-                <clipPath id="clip-left">
-                  <polygon points="2,2 15,2 9,22 2,22" />
-                </clipPath>
-                
-                <clipPath id="clip-right">
-                  <polygon points="15,2 22,2 22,22 9,22" />
-                </clipPath>
               </defs>
 
-              {/* Left Side: Gradient Background + Subject */}
-              <g clipPath="url(#clip-left)">
-                <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#logo-grad)" />
-                <circle cx="9" cy="8" r="2.5" fill="white" fillOpacity="0.9" />
-                <path d="M2 17L7 11L13 18H2Z" fill="white" />
-                <path d="M8 18L12 13L16 18H8Z" fill="white" fillOpacity="0.8" />
-              </g>
+              {/* Base Photo Frame: Rounded Rect in Clean Slate Gray */}
+              <rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="#475569" stroke="#334155" strokeWidth="0.75" />
 
-              {/* Right Side: Checkerboard Background + Subject */}
-              <g clipPath="url(#clip-right)">
-                <rect x="2" y="2" width="20" height="20" rx="5" fill="url(#logo-checker)" stroke="#e2e8f0" strokeWidth="0.75" />
-                <circle cx="9" cy="8" r="2.5" fill="#4f46e5" />
-                <path d="M2 17L7 11L13 18H2Z" fill="#312e81" />
-                <path d="M8 18L12 13L16 18H8Z" fill="#4f46e5" />
-              </g>
-              
-              {/* Diagonal Slider Line */}
-              <line x1="15" y1="2" x2="9" y2="22" stroke="white" strokeWidth="1.5" />
-              <circle cx="12" cy="12" r="2" fill="white" stroke="#4f46e5" strokeWidth="1" />
+              {/* Cutout Region: Circle in the center filled with checkerboard */}
+              <circle cx="12" cy="12" r="5" fill="url(#neutral-checker)" stroke="#ffffff" strokeWidth="1.5" />
             </svg>
           </div>
           <div className="brand-text">
