@@ -431,33 +431,31 @@ export default function App() {
       <header>
         <div className="brand">
           <div className="brand-logo">
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                {/* Neutral Checkerboard Pattern for the brushed swoosh */}
-                <pattern id="brush-checker" width="4" height="4" patternUnits="userSpaceOnUse">
-                  <rect width="4" height="4" fill="#ffffff" />
-                  <rect width="2" height="2" fill="#cbd5e1" />
-                  <rect x="2" y="2" width="2" height="2" fill="#cbd5e1" />
-                </pattern>
-              </defs>
-
-              {/* Clean neutral card background */}
-              <rect x="2" y="2" width="20" height="20" rx="5" fill="#f1f5f9" stroke="#cbd5e1" strokeWidth="0.75" />
-
-              {/* The transparent checkerboard brush stroke swoosh */}
-              <path d="M2 13C6 11 10 16 14 13.5L13.5 15.5C10 18 6 13 2 15.5V13Z" fill="url(#brush-checker)" fillOpacity="0.9" />
+            <svg width="38" height="38" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Background Paint Swoosh / Splash */}
+              <path d="M 4 22 C 10 14, 20 8, 28 10 C 26 14, 18 24, 10 28 Z" fill="#fef08a" stroke="#0f172a" strokeWidth="2.5" strokeLinejoin="round" />
               
-              {/* Clean Slate Gray Silhouette */}
-              <circle cx="8" cy="8.5" r="2.5" fill="#475569" />
-              <path d="M4 17C4 14.2 5.8 12.5 8 12.5C10.2 12.5 12 14.2 12 17H4Z" fill="#475569" />
+              {/* Paint Droplets flying off */}
+              <circle cx="27" cy="15" r="2" fill="#eab308" stroke="#0f172a" strokeWidth="1.5" />
+              <circle cx="23" cy="22" r="1.5" fill="#eab308" stroke="#0f172a" strokeWidth="1.5" />
 
-              {/* The Paintbrush */}
-              {/* Handle */}
-              <line x1="14" y1="11" x2="19.5" y2="5.5" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
-              {/* Ferrule */}
-              <line x1="12.5" y1="9.5" x2="15.5" y2="12.5" stroke="#334155" strokeWidth="2.5" strokeLinecap="round" />
-              {/* Bristles */}
-              <polygon points="12.5,9.5 15.5,12.5 11,14.5" fill="#1e293b" />
+              {/* Rotated Paintbrush Group */}
+              <g transform="rotate(35 16 16)">
+                {/* Handle */}
+                <path d="M 13 18 L 19 18 C 19 23, 17.5 28, 17 30 C 16 31.5, 16 31.5, 15 30 C 14.5 28, 13 23, 13 18 Z" fill="#ca8a04" stroke="#0f172a" strokeWidth="2.5" strokeLinejoin="round" />
+                
+                {/* Ferrule (Metal band with ridges) */}
+                <path d="M 11 14 L 21 14 L 20 18 L 12 18 Z" fill="#eab308" stroke="#0f172a" strokeWidth="2.5" strokeLinejoin="round" />
+                <line x1="12.5" y1="16" x2="19.5" y2="16" stroke="#0f172a" strokeWidth="1.5" />
+
+                {/* Bristles */}
+                <path d="M 16 4 C 12 7, 11 10, 11 14 L 21 14 C 21 10, 20 7, 16 4 Z" fill="#facc15" stroke="#0f172a" strokeWidth="2.5" strokeLinejoin="round" />
+                
+                {/* Texture lines on bristles */}
+                <path d="M 14 9 L 14 12" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M 16 7 L 16 12" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" />
+                <path d="M 18 9 L 18 12" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" />
+              </g>
             </svg>
           </div>
           <div className="brand-text">
