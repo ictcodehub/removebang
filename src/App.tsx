@@ -1007,7 +1007,7 @@ export default function App() {
                   </div>
 
                   <div className="batch-items-grid">
-                    {batchItems.map((item, idx) => {
+                    {batchItems.map((item) => {
                       const isProcessing = item.status === 'processing';
                       const isDone = item.status === 'done';
                       const isFailed = item.status === 'failed';
