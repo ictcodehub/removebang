@@ -431,7 +431,14 @@ export default function App() {
       <header>
         <div className="brand">
           <div className="brand-logo">
-            <Sparkles size={20} color="white" />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Photo border, dashed indicating background removal */}
+              <rect x="3.5" y="3.5" width="17" height="17" rx="3.5" stroke="white" strokeWidth="2" strokeDasharray="3 3" strokeOpacity="0.6" />
+              
+              {/* Subject silhouette in the foreground */}
+              <path d="M12 12.5C14.2091 12.5 16 10.7091 16 8.5C16 6.29086 14.2091 4.5 12 4.5C9.79086 4.5 8 6.29086 8 8.5C8 10.7091 9.79086 12.5 12 12.5Z" fill="white" />
+              <path d="M6 19.5C6 16.7386 8.23858 14.5 11 14.5H13C15.7614 14.5 18 16.7386 18 19.5V20H6V19.5Z" fill="white" />
+            </svg>
           </div>
           <div className="brand-text">
             <h1 className="neon-text">RemoveBang</h1>
