@@ -932,6 +932,7 @@ footer a:hover {
 .batch-item-card {
   display: flex;
   flex-direction: column;
+  height: 220px;
   overflow: hidden;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
@@ -974,13 +975,14 @@ footer a:hover {
 /* Card Thumbnail Box */
 .card-thumbnail-container {
   position: relative;
-  aspect-ratio: 16/11;
+  height: 135px;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .card-thumbnail {
