@@ -18,7 +18,9 @@ import {
   Layers,
   FileArchive,
   ZoomIn,
-  ZoomOut
+  ZoomOut,
+  PanelRightClose,
+  PanelRightOpen
 } from 'lucide-react';
 import JSZip from 'jszip';
 import './App.css';
@@ -96,6 +98,7 @@ export default function App() {
   // WebGPU support detection
   const [webGPUSupported, setWebGPUSupported] = useState<boolean>(false);
   const [activeBackend, setActiveBackend] = useState<string>('WASM');
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
 
   // Model & Worker states
   const [isWorkerReady, setIsWorkerReady] = useState<boolean>(false);
@@ -984,7 +987,14 @@ export default function App() {
               </div>
             ) : (
               /* Antrean Batch Aktif */
-              <div className="workspace-grid batch-grid-layout">
+              <div className={`workspace-grid batch-grid-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
+                <button 
+                  className={`sidebar-toggle-btn ${!isSidebarOpen ? 'collapsed' : ''}`}
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  title={isSidebarOpen ? "Sembunyikan Sidebar" : "Tampilkan Sidebar"}
+                >
+                  {isSidebarOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+                </button>
                 
                 {/* Sisi Kiri: Grid Preview Batch */}
                 <div className="batch-preview-container">
@@ -1397,7 +1407,14 @@ export default function App() {
               </div>
             ) : (
               /* Workspace Utama */
-              <div className="workspace-grid">
+              <div className={`workspace-grid ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
+                <button 
+                  className={`sidebar-toggle-btn ${!isSidebarOpen ? 'collapsed' : ''}`}
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  title={isSidebarOpen ? "Sembunyikan Sidebar" : "Tampilkan Sidebar"}
+                >
+                  {isSidebarOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
+                </button>
                 
                 {/* Sisi Kiri: Canvas Viewport dengan Split Comparison */}
                 <div className="canvas-viewport transparent-checkerboard" style={{ padding: '0px', overflow: 'hidden' }}>
