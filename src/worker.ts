@@ -29,26 +29,57 @@ self.onmessage = async (event: MessageEvent) => {
       const config = await AutoConfig.from_pretrained('briaai/RMBG-1.4');
       config.model_type = 'isnet';
 
-      segmentator = await pipeline('image-segmentation', 'briaai/RMBG-1.4', {
-        config,
-        device: device as any,
-        progress_callback: (progressData: any) => {
-          if (progressData.status === 'progress') {
-            self.postMessage({
-              type: 'download-progress',
-              file: progressData.file,
-              progress: progressData.progress,
-              loaded: progressData.loaded,
-              total: progressData.total,
-            });
-          } else if (progressData.status === 'ready') {
-            self.postMessage({
-              type: 'file-ready',
-              file: progressData.file,
-            });
+      try {
+        segmentator = await pipeline('image-segmentation', 'briaai/RMBG-1.4', {
+          config,
+          device: device as any,
+          progress_callback: (progressData: any) => {
+            if (progressData.status === 'progress') {
+              self.postMessage({
+                type: 'download-progress',
+                file: progressData.file,
+                progress: progressData.progress,
+                loaded: progressData.loaded,
+                total: progressData.total,
+              });
+            } else if (progressData.status === 'ready') {
+              self.postMessage({
+                type: 'file-ready',
+                file: progressData.file,
+              });
+            }
           }
+        });
+      } catch (gpuError: any) {
+        if (device === 'webgpu') {
+          console.warn('Gagal memuat menggunakan WebGPU, beralih ke WASM...', gpuError);
+          device = 'wasm';
+          self.postMessage({ type: 'status', message: 'WebGPU gagal terinisialisasi. Beralih ke backend WASM...' });
+          
+          segmentator = await pipeline('image-segmentation', 'briaai/RMBG-1.4', {
+            config,
+            device: 'wasm',
+            progress_callback: (progressData: any) => {
+              if (progressData.status === 'progress') {
+                self.postMessage({
+                  type: 'download-progress',
+                  file: progressData.file,
+                  progress: progressData.progress,
+                  loaded: progressData.loaded,
+                  total: progressData.total,
+                });
+              } else if (progressData.status === 'ready') {
+                self.postMessage({
+                  type: 'file-ready',
+                  file: progressData.file,
+                });
+              }
+            }
+          });
+        } else {
+          throw gpuError;
         }
-      });
+      }
 
       self.postMessage({ type: 'ready', device });
     } catch (error: any) {

@@ -315,8 +315,8 @@ export default function App() {
 
   // Inisialisasi Web Worker
   useEffect(() => {
-    // Inisialisasi worker menggunakan Vite Worker import
-    const worker = new Worker(new URL('./worker.ts', import.meta.url), {
+    // Inisialisasi worker menggunakan Vite Worker import dengan cache buster
+    const worker = new Worker(new URL('./worker.ts?v=3', import.meta.url), {
       type: 'module',
     });
     
