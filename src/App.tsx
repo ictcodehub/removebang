@@ -20,19 +20,23 @@ import {
   ZoomIn,
   ZoomOut,
   PanelRightClose,
-  PanelRightOpen
+  PanelRightOpen,
+  Sun,
+  Moon
 } from 'lucide-react';
 import JSZip from 'jszip';
+import lightIcon from './assets/light-icon.png';
+import darkIcon from './assets/dark-icon.png';
 import './App.css';
 
-// Preset warna solid
+// Solid color presets
 const SOLID_PRESETS = [
   '#FFFFFF', '#000000', '#F3F4F6', '#3B82F6', 
   '#EF4444', '#10B981', '#F59E0B', '#8B5CF6', 
   '#EC4899', '#06B6D4', '#64748B', '#78350F'
 ];
 
-// Preset gradasi
+// Gradient presets
 const GRADIENT_PRESETS = [
   'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
   'linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%)',
@@ -44,7 +48,7 @@ const GRADIENT_PRESETS = [
   'linear-gradient(135deg, #fa709a 0%, #fee140 100%)'
 ];
 
-// Preset background images
+// Background image presets
 const BG_IMAGE_PRESETS = [
   { name: 'Office', url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80' },
   { name: 'Nature', url: 'https://images.unsplash.com/photo-1501854140801-50d01698950b?auto=format&fit=crop&w=600&q=80' },
@@ -100,6 +104,15 @@ export default function App() {
   const [activeBackend, setActiveBackend] = useState<string>('WASM');
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(true);
 
+  // Theme state persisted in localStorage
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('removebang-theme') as 'dark' | 'light') || 'dark';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('removebang-theme', theme);
+  }, [theme]);
+
   // Model & Worker states
   const [isWorkerReady, setIsWorkerReady] = useState<boolean>(false);
   const [modelLoading, setModelLoading] = useState<boolean>(false);
@@ -125,7 +138,7 @@ export default function App() {
   const [brightness, setBrightness] = useState<number>(100);
   const [contrast, setContrast] = useState<number>(100);
 
-  // Before/After comparison slider percentage (0 to 100)
+  // Before/After comparison slider
   const [compareSplit, setCompareSplit] = useState<number>(50);
 
   // Batch Mode states
@@ -144,8 +157,7 @@ export default function App() {
   const [isPanning, setIsPanning] = useState<boolean>(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
 
-
-  // Ref
+  // Refs
   const workerRef = useRef<Worker | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgImageInputRef = useRef<HTMLInputElement>(null);
@@ -163,7 +175,7 @@ export default function App() {
 
   const previewViewportRef = useRef<HTMLDivElement>(null);
 
-  // Listen to wheel events on preview viewport natively to bypass active listener restrictions
+  // Native wheel event for preview zoom
   useEffect(() => {
     const viewport = previewViewportRef.current;
     if (!viewport) return;
@@ -186,7 +198,7 @@ export default function App() {
     };
   }, [previewItem]);
 
-  // Render pratinjau composite untuk satu item batch di memori
+  // Render composite for a single batch item in memory
   const renderItemComposite = (item: BatchItem): Promise<string> => {
     return new Promise((resolve) => {
       if (!item.mask) {
@@ -309,16 +321,15 @@ export default function App() {
     });
   };
 
-  // Deteksi WebGPU saat inisialisasi
+  // Detect WebGPU on init
   useEffect(() => {
     if ('gpu' in navigator) {
       setWebGPUSupported(true);
     }
   }, []);
 
-  // Inisialisasi Web Worker
+  // Initialize Web Worker
   useEffect(() => {
-    // Inisialisasi worker menggunakan Vite Worker import dengan cache buster
     const worker = new Worker(new URL('./worker.ts?v=3', import.meta.url), {
       type: 'module',
     });
@@ -339,7 +350,6 @@ export default function App() {
           break;
 
         case 'file-ready':
-          // File selesai diunduh
           setDownloads(prev => {
             const next = { ...prev };
             delete next[file];
@@ -351,7 +361,7 @@ export default function App() {
           setIsWorkerReady(true);
           setModelLoading(false);
           if (device) setActiveBackend(device.toUpperCase());
-          setStatusMessage('Model AI RMBG-1.4 siap digunakan.');
+          setStatusMessage('RMBG-1.4 AI model is ready.');
           break;
 
         case 'result':
@@ -385,7 +395,7 @@ export default function App() {
             });
             setInferenceTime(duration);
             setProcessing(false);
-            setStatusMessage('Penghapusan background selesai.');
+            setStatusMessage('Background removal completed.');
           }
           break;
 
@@ -407,7 +417,7 @@ export default function App() {
 
     workerRef.current = worker;
 
-    // Muat model saat pertama kali dibuka
+    // Load model on first open
     setModelLoading(true);
     worker.postMessage({ type: 'load' });
 
@@ -416,7 +426,7 @@ export default function App() {
     };
   }, []);
 
-  // Antrean Pemrosesan Sequential Mode Batch
+  // Sequential batch processing queue
   useEffect(() => {
     if (!isBatchMode || !isWorkerReady || batchProcessingIndex !== null) return;
 
@@ -424,12 +434,10 @@ export default function App() {
     if (pendingIndex !== -1) {
       setBatchProcessingIndex(pendingIndex);
       
-      // Update status of this item to 'processing'
       setBatchItems(prev => prev.map((item, idx) => 
         idx === pendingIndex ? { ...item, status: 'processing' } : item
       ));
 
-      // Post message to web worker
       if (workerRef.current) {
         workerRef.current.postMessage({
           type: 'process',
@@ -439,7 +447,7 @@ export default function App() {
     }
   }, [isBatchMode, isWorkerReady, batchItems, batchProcessingIndex]);
 
-  // Trigger update pratinjau batch jika setelan global berubah (dengan 300ms debounce)
+  // Update batch composites on global settings change (debounced)
   useEffect(() => {
     if (!isBatchMode || batchItems.length === 0) return;
 
@@ -459,12 +467,12 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [bgType, bgColor, bgGradient, bgImage, customBgImage, feather, brightness, contrast, isBatchMode]);
 
-  // Gambar hasil gabungan ke Canvas Display setiap ada perubahan
+  // Draw composite to canvas display
   useEffect(() => {
     drawComposite();
   }, [image, mask, bgType, bgColor, bgGradient, bgImage, customBgImage, feather, brightness, contrast]);
 
-  // Fungsi menggambar composite ke Canvas utama
+  // Draw composite to main canvas
   const drawComposite = () => {
     const canvas = canvasRef.current;
     if (!canvas || !image || !mask) return;
@@ -476,15 +484,11 @@ export default function App() {
     canvas.width = width;
     canvas.height = height;
 
-    // 1. Gambar Background terlebih dahulu
     if (bgType === 'color') {
       ctx.fillStyle = bgColor;
       ctx.fillRect(0, 0, width, height);
     } else if (bgType === 'gradient') {
-      // Kita perlu membuat CSS gradient di Canvas. Untuk kesederhanaan, mari kita parsing warna gradasi atau gambar gradient
-      // Sebagai fallback, mari kita isi dengan background gradasi canvas linear
       const grad = ctx.createLinearGradient(0, 0, width, height);
-      // Parsing warna-warna preset dari CSS string
       if (bgGradient.includes('#')) {
         const matches = bgGradient.match(/#[a-fA-F0-9]{6}/g);
         if (matches && matches.length >= 2) {
@@ -506,28 +510,24 @@ export default function App() {
       bgImg.crossOrigin = 'anonymous';
       bgImg.src = bgImgUrl;
       bgImg.onload = () => {
-        // Gambar background dengan teknik cover (menjaga aspek rasio)
         const scale = Math.max(width / bgImg.width, height / bgImg.height);
         const x = (width - bgImg.width * scale) / 2;
         const y = (height - bgImg.height * scale) / 2;
         ctx.drawImage(bgImg, x, y, bgImg.width * scale, bgImg.height * scale);
-        // Redraw foreground setelah background gambar termuat
         drawForegroundOnly(ctx, width, height);
       };
-      return; // Kembalikan dulu agar menunggu gambar termuat
+      return;
     } else {
-      // Transparan - bersihkan canvas
       ctx.clearRect(0, 0, width, height);
     }
 
     drawForegroundOnly(ctx, width, height);
   };
 
-  // Fungsi khusus untuk menggambar foreground (gambar asli + mask + filters)
+  // Draw foreground (original image + mask + filters)
   const drawForegroundOnly = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
     if (!image || !mask) return;
 
-    // 2. Buat Canvas mask mentah (ukuran model AI)
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = mask.width;
     maskCanvas.height = mask.height;
@@ -544,56 +544,45 @@ export default function App() {
     }
     maskCtx.putImageData(maskImgData, 0, 0);
 
-    // 3. Buat Canvas mask yang sudah diskalakan ke resolusi asli gambar
     const scaledMaskCanvas = document.createElement('canvas');
     scaledMaskCanvas.width = width;
     scaledMaskCanvas.height = height;
     const scaledMaskCtx = scaledMaskCanvas.getContext('2d');
     if (!scaledMaskCtx) return;
 
-    // Jika ada feathering, berikan filter blur ke mask
     if (feather > 0) {
       scaledMaskCtx.filter = `blur(${feather}px)`;
     }
     scaledMaskCtx.drawImage(maskCanvas, 0, 0, width, height);
 
-    // 4. Buat Canvas khusus untuk foreground yang dipotong
     const fgCanvas = document.createElement('canvas');
     fgCanvas.width = width;
     fgCanvas.height = height;
     const fgCtx = fgCanvas.getContext('2d');
     if (!fgCtx) return;
 
-    // Gambar foto asli
     const imgElement = originalImageRef.current;
     if (imgElement && imgElement.complete) {
       fgCtx.drawImage(imgElement, 0, 0);
-      
-      // Gunakan globalCompositeOperation 'destination-in' untuk memotong berdasarkan mask
       fgCtx.globalCompositeOperation = 'destination-in';
       fgCtx.drawImage(scaledMaskCanvas, 0, 0);
-      
-      // Kembalikan ke mode normal
       fgCtx.globalCompositeOperation = 'source-over';
     }
 
-    // 5. Terapkan filter Brightness & Contrast pada foreground sebelum digambar ke display
     ctx.save();
     if (brightness !== 100 || contrast !== 100) {
       ctx.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
     }
-
-    // Gambar foreground di atas background
     ctx.drawImage(fgCanvas, 0, 0);
     ctx.restore();
   };
 
-  // Tambahkan banyak file ke antrean batch
+  // Add files to batch queue
   const addFilesToBatch = (files: File[]) => {
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     
     if (imageFiles.length === 0) {
-      setError('Format file tidak didukung. Harap pilih file gambar.');
+      setError('Unsupported file format. Please select an image file.');
       return;
     }
     
@@ -617,7 +606,6 @@ export default function App() {
           status: 'pending',
         };
         setBatchItems(prev => {
-          // Cegah duplikasi file yang sama persis jika tidak sengaja
           if (prev.some(item => item.file.name === file.name && item.file.size === file.size)) {
             return prev;
           }
@@ -627,7 +615,7 @@ export default function App() {
     });
   };
 
-  // Tangani pemilihan file gambar
+  // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
@@ -641,7 +629,7 @@ export default function App() {
 
   const processSelectedFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
-      setError('Format file tidak didukung. Harap pilih gambar.');
+      setError('Unsupported file format. Please select an image.');
       return;
     }
 
@@ -664,7 +652,6 @@ export default function App() {
         url,
       });
 
-      // Secara otomatis mulai memproses penghapusan background
       if (workerRef.current && isWorkerReady) {
         setProcessing(true);
         workerRef.current.postMessage({
@@ -675,7 +662,7 @@ export default function App() {
     };
   };
 
-  // Tangani seret-dan-lepas file (Drag & Drop)
+  // Drag & Drop handlers
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -701,7 +688,7 @@ export default function App() {
     }
   };
 
-  // Unduh hasil gambar PNG resolusi tinggi
+  // Download result as high-res PNG
   const handleDownload = () => {
     const canvas = canvasRef.current;
     if (!canvas || !image) return;
@@ -718,7 +705,7 @@ export default function App() {
     }, 'image/png');
   };
 
-  // Hapus satu item dari antrean batch
+  // Delete batch item
   const handleDeleteBatchItem = (id: string) => {
     setBatchItems(prev => {
       const item = prev.find(itm => itm.id === id);
@@ -730,7 +717,7 @@ export default function App() {
     });
   };
 
-  // Unduh satu hasil item batch
+  // Download single batch item
   const handleDownloadBatchItem = (item: BatchItem) => {
     if (!item.resultUrl) return;
     const a = document.createElement('a');
@@ -740,7 +727,7 @@ export default function App() {
     a.click();
   };
 
-  // Mulai memproses semua / memproses ulang item yang gagal
+  // Process all / retry failed
   const handleProcessAllBatch = () => {
     setError(null);
     setBatchItems(prev => prev.map(item => 
@@ -750,30 +737,16 @@ export default function App() {
     ));
   };
 
-  // Unduh semua hasil batch yang sukses diproses
-  const handleDownloadAllBatch = () => {
-    const completed = batchItems.filter(item => item.status === 'done' && item.resultUrl);
-    if (completed.length === 0) return;
-    
-    completed.forEach((item, index) => {
-      setTimeout(() => {
-        const a = document.createElement('a');
-        const originalName = item.name.substring(0, item.name.lastIndexOf('.')) || item.name;
-        a.download = `${originalName}_removebang.png`;
-        a.href = item.resultUrl!;
-        a.click();
-      }, index * 400); // Jeda 400ms antar unduhan agar tidak diblokir browser
-    });
-  };
 
-  // Unduh semua hasil batch sebagai berkas ZIP tunggal
+
+  // Download all as ZIP
   const handleDownloadAllZip = async () => {
     const completed = batchItems.filter(item => item.status === 'done' && item.resultUrl);
     if (completed.length === 0) return;
 
     setIsZipping(true);
     setError(null);
-    setStatusMessage('Sedang mengompresi berkas gambar ke ZIP...');
+    setStatusMessage('Compressing image files to ZIP...');
 
     try {
       const zip = new JSZip();
@@ -786,7 +759,6 @@ export default function App() {
         const originalName = item.name.substring(0, item.name.lastIndexOf('.')) || item.name;
         const fileName = `${originalName}_removebang.png`;
         
-        // Atur agar nama file unik di dalam ZIP jika ada berkas bernama sama
         let uniqueFileName = fileName;
         let counter = 1;
         while (zip.file(uniqueFileName)) {
@@ -806,17 +778,16 @@ export default function App() {
       a.click();
       
       URL.revokeObjectURL(downloadUrl);
-      setStatusMessage('Unduhan berkas ZIP selesai.');
+      setStatusMessage('ZIP download completed.');
     } catch (err: any) {
       console.error(err);
-      setError('Gagal membuat berkas ZIP: ' + err.message);
+      setError('Failed to create ZIP file: ' + err.message);
     } finally {
       setIsZipping(false);
     }
   };
 
-
-  // Bersihkan seluruh antrean batch
+  // Clear all batch items
   const handleResetAllBatch = () => {
     batchItems.forEach(item => {
       URL.revokeObjectURL(item.url);
@@ -827,7 +798,7 @@ export default function App() {
     setError(null);
   };
 
-  // Unggah custom background image
+  // Upload custom background image
   const handleBgImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
@@ -857,908 +828,403 @@ export default function App() {
     fileInputRef.current?.click();
   };
 
-  // Cek apakah model sedang diunduh (terdapat aktif downloads)
   const isDownloading = Object.keys(downloads).length > 0;
 
+  // Determine whether to show sidebar
+  const showSidebar = (!isBatchMode && image) || (isBatchMode && batchItems.length > 0);
+
+  // Get the icon source based on theme
+  const logoSrc = theme === 'dark' ? darkIcon : lightIcon;
+
+  // ─── RENDER ───────────────────────────────────────────────────────
   return (
-    <div className="app-container">
-      <header>
-        <div className="brand">
-          <div className="brand-logo">
-            <img src="icon.jpg" alt="RemoveBang Logo" style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'contain' }} />
+    <div className={`app-container premium-${theme}-theme`}>
+
+      {/* ── TOP NAVIGATION BAR ── */}
+      <nav className="top-nav">
+        {/* Left: Logo + Brand */}
+        <div className="nav-left">
+          <div className="nav-logo">
+            <img src={logoSrc} alt="RemoveBang" />
           </div>
-          <div className="brand-text">
-            <h1 className="neon-text">RemoveBang</h1>
-            <p>Aplikasi Penghapus Background HD Lokal Terakselerasi GPU</p>
-          </div>
+          <span className="nav-brand">RemoveBang</span>
+          {statusMessage && <div className="status-pill">{statusMessage}</div>}
         </div>
 
-        <div className={`gpu-badge ${webGPUSupported ? '' : 'cpu'}`}>
-          <Cpu size={16} />
-          <span>Akselerasi: {activeBackend}</span>
-          <div className="badge-dot" />
+        {/* Center: Status */}
+        <div className="nav-center">
         </div>
-      </header>
 
-      {error && (
-        <div className="glass-panel neon-glow" style={{ padding: '16px 24px', borderColor: 'var(--error)', background: 'rgba(239, 68, 68, 0.05)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <AlertTriangle color="var(--error)" size={20} />
-          <p style={{ color: 'var(--error)', fontSize: '14px', fontWeight: '500' }}>Error: {error}</p>
-        </div>
-      )}
-
-      {/* Tampilan Pengunduhan Model AI */}
-      {modelLoading && (
-        <div className="glass-panel loading-card neon-glow">
-          <div className="loading-header">
-            <div className="loading-spinner" />
-            <div className="loading-info">
-              <h3>Memuat Model AI RMBG-1.4...</h3>
-              <p>{statusMessage || 'Sedang menghubungkan ke server model...'}</p>
-            </div>
+        {/* Right: Mode tabs + badges + toggles */}
+        <div className="nav-right">
+          {/* Mode Tabs */}
+          <div className="mode-tabs">
+            <button 
+              className={`mode-tab ${!isBatchMode ? 'active' : ''}`}
+              onClick={() => {
+                if (batchProcessingIndex !== null) return;
+                setIsBatchMode(false);
+              }}
+              disabled={batchProcessingIndex !== null}
+            >
+              <ImageIcon size={14} />
+              Single
+            </button>
+            <button 
+              className={`mode-tab ${isBatchMode ? 'active' : ''}`}
+              onClick={() => setIsBatchMode(true)}
+            >
+              <Layers size={14} />
+              Batch
+              {batchItems.length > 0 && (
+                <span className="badge-count">{batchItems.length}</span>
+              )}
+            </button>
           </div>
 
-          {isDownloading && (
-            <div className="progress-container">
-              <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '500' }}>Progres Unduhan Model (~176MB - Hanya sekali, selanjutnya dicache otomatis):</div>
-              {Object.entries(downloads).map(([filename, progressInfo]) => (
-                <div key={filename} className="download-item">
-                  <div className="download-meta">
-                    <span className="download-filename">{filename}</span>
-                    <span className="download-percentage">{progressInfo.progress}%</span>
-                  </div>
-                  <div className="progress-track">
-                    <div 
-                      className="progress-fill" 
-                      style={{ width: `${progressInfo.progress}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+          {/* Backend Badge */}
+          <div className={`backend-badge ${webGPUSupported ? '' : 'cpu'}`}>
+            <Cpu size={12} />
+            <span>{activeBackend}</span>
+            <span className="dot" />
+          </div>
+
+          {/* Theme Toggle */}
+          <button 
+            className="icon-btn"
+            onClick={() => setTheme(prev => prev === 'dark' ? 'light' : 'dark')}
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+
+          {/* Sidebar Toggle */}
+          {showSidebar && (
+            <button 
+              className="icon-btn sidebar-toggle"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              title={isSidebarOpen ? 'Hide Sidebar' : 'Show Sidebar'}
+            >
+              {isSidebarOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+            </button>
+          )}
+
+          {/* Reset / Clear */}
+          {showSidebar && (
+            <button
+              className="icon-btn"
+              onClick={isBatchMode ? handleResetAllBatch : handleReset}
+              title="Reset / Clear All"
+              disabled={batchProcessingIndex !== null}
+              style={{ color: 'var(--error)' }}
+            >
+              <RefreshCw size={16} />
+            </button>
           )}
         </div>
-      )}
+      </nav>
 
-      {/* Halaman Utama Upload & Workspace */}
-      {!modelLoading && (
-        <>
-          {/* Form input gambar tersembunyi */}
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            accept="image/*" 
-            multiple={true}
-            style={{ display: 'none' }}
-          />
-
-          {/* Toggle Mode Tunggal vs Batch */}
-          <div className="mode-toggle-container">
-            <div className="mode-toggle-pill glass-panel">
-              <button 
-                className={`mode-toggle-btn ${!isBatchMode ? 'active' : ''}`}
-                onClick={() => {
-                  if (batchProcessingIndex !== null) return;
-                  setIsBatchMode(false);
-                }}
-                disabled={batchProcessingIndex !== null}
-              >
-                <ImageIcon size={16} />
-                <span>Mode Tunggal</span>
-              </button>
-              <button 
-                className={`mode-toggle-btn ${isBatchMode ? 'active' : ''}`}
-                onClick={() => setIsBatchMode(true)}
-              >
-                <Layers size={16} />
-                <span>Mode Batch</span>
-                {batchItems.length > 0 && (
-                  <span className="badge-count">{batchItems.length}</span>
-                )}
-              </button>
-            </div>
+      {/* ── MAIN CONTENT ── */}
+      <main className="main-content">
+        {/* Error Banner */}
+        {error && (
+          <div className="error-banner">
+            <AlertTriangle size={16} />
+            <span>{error}</span>
           </div>
+        )}
 
-          {isBatchMode ? (
-            /* =======================================
-               WORKSPACE MODE BATCH
-               ======================================= */
-            batchItems.length === 0 ? (
-              /* Area Upload Mode Batch (Kosong) */
-              <div 
-                className={`glass-panel upload-wrapper ${dragActive ? 'drag-active' : ''}`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                onClick={triggerFileInput}
-              >
-                <div className="upload-icon-container">
-                  <Layers size={36} />
+        {/* Hidden file inputs */}
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          onChange={handleFileChange} 
+          accept="image/*" 
+          multiple={true}
+          className="hidden-input"
+        />
+        <input 
+          type="file" 
+          ref={bgImageInputRef} 
+          onChange={handleBgImageUpload} 
+          accept="image/*" 
+          className="hidden-input"
+        />
+
+        <div className="workspace">
+          {modelLoading ? (
+            /* ── MODEL LOADING ── */
+            <div className="upload-zone">
+              <div className="loading-card">
+                <div className="loading-header">
+                  <div className="loading-spinner" />
+                  <div>
+                    <div className="loading-title">Loading RMBG-1.4 AI Model...</div>
+                    <div className="loading-status">{statusMessage || 'Connecting to model server...'}</div>
+                  </div>
                 </div>
-                <div className="upload-text">
-                  <h3>Seret & Lepaskan Banyak Foto</h3>
-                  <p>atau klik untuk menelusuri folder komputer Anda</p>
-                </div>
-                <div className="upload-limits">
-                  Mendukung PNG, JPEG, WEBP. Seluruh foto akan diproses secara lokal satu per satu.
-                </div>
+
+                {isDownloading && (
+                  <div className="progress-section">
+                    <div className="progress-label">Model Download (~176MB — one-time only, cached automatically)</div>
+                    {Object.entries(downloads).map(([filename, progressInfo]) => (
+                      <div key={filename} className="download-row">
+                        <div className="download-row-meta">
+                          <span className="download-row-name">{filename}</span>
+                          <span className="download-row-pct">{progressInfo.progress}%</span>
+                        </div>
+                        <div className="progress-track">
+                          <div className="progress-fill" style={{ width: `${progressInfo.progress}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
-              /* Antrean Batch Aktif */
-              <div className={`workspace-grid batch-grid-layout ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
-                <button 
-                  className={`sidebar-toggle-btn ${!isSidebarOpen ? 'collapsed' : ''}`}
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  title={isSidebarOpen ? "Sembunyikan Sidebar" : "Tampilkan Sidebar"}
-                >
-                  {isSidebarOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
-                </button>
-                
-                {/* Sisi Kiri: Grid Preview Batch */}
-                <div className="batch-preview-container">
-                  <div className="batch-grid-header glass-panel">
-                    <div className="batch-stats-info">
-                      <h3>Antrean Batch ({batchItems.length} Foto)</h3>
-                      <p>
-                        Diproses: {batchItems.filter(item => item.status === 'done').length} / {batchItems.length}
-                      </p>
-                    </div>
-                    <div className="batch-header-actions">
-                      <button 
-                        className="btn-batch-add"
-                        onClick={triggerFileInput}
-                      >
-                        <Upload size={14} />
-                        <span>Tambah Foto</span>
-                      </button>
+            </div>
+          ) : (
+            <>
+              {isBatchMode ? (
+                /* ═══════════════════════════════════════
+                   BATCH MODE
+                   ═══════════════════════════════════════ */
+                batchItems.length === 0 ? (
+                  /* Empty batch upload */
+                  <div className="upload-zone">
+                    <div 
+                      className={`upload-card ${dragActive ? 'drag-active' : ''}`}
+                      onDragEnter={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDragOver={handleDrag}
+                      onDrop={handleDrop}
+                      onClick={triggerFileInput}
+                    >
+                      <div className="upload-icon"><Layers size={32} /></div>
+                      <h3 className="upload-heading">Drag & Drop Multiple Images</h3>
+                      <p className="upload-sub">or click to browse your computer</p>
+                      <span className="upload-hint">PNG, JPEG, WEBP — processed locally</span>
                     </div>
                   </div>
+                ) : (
+                  /* Active batch */
+                  <div className={`editor-layout ${!isSidebarOpen ? 'sidebar-hidden' : ''}`}>
+                    {/* Left: Batch queue */}
+                    <div className="batch-container">
+                      <div className="batch-header">
+                        <div>
+                          <div className="batch-title">Batch Queue ({batchItems.length} Images)</div>
+                          <div className="batch-subtitle">
+                            Processed: {batchItems.filter(i => i.status === 'done').length} / {batchItems.length}
+                          </div>
+                        </div>
+                        <button className="batch-add-btn" onClick={triggerFileInput}>
+                          <Upload size={14} />
+                          <span>Add Images</span>
+                        </button>
+                      </div>
 
-                  <div className="batch-items-grid">
-                    {batchItems.map((item) => {
-                      const isProcessing = item.status === 'processing';
-                      const isDone = item.status === 'done';
-                      const isFailed = item.status === 'failed';
-                      const isPending = item.status === 'pending';
+                      <div className="batch-grid">
+                        {batchItems.map((item) => (
+                          <div key={item.id} className={`batch-card ${item.status}`}>
+                            <div className="card-thumb-wrap checkerboard">
+                              <img 
+                                src={item.resultUrl || item.url} 
+                                alt={item.name} 
+                                className="card-thumb"
+                              />
+                              
+                              {item.status === 'processing' && (
+                                <div className="card-processing-overlay">
+                                  <div className="loading-spinner" />
+                                  <span>Processing...</span>
+                                </div>
+                              )}
 
-                      return (
-                        <div key={item.id} className={`batch-item-card glass-panel ${item.status}`}>
-                          <div className="card-thumbnail-container transparent-checkerboard">
-                            <img 
-                              src={item.resultUrl || item.url} 
-                              alt={item.name} 
-                              className="card-thumbnail"
-                            />
-                            
-                            {isProcessing && (
-                              <div className="card-overlay">
-                                <div className="loading-spinner" />
-                                <span>Memproses...</span>
-                              </div>
-                            )}
-
-                            <div className="card-hover-actions">
-                              {isDone && item.resultUrl && (
-                                <>
+                              <div className="card-actions-overlay">
+                                {item.status === 'done' && item.resultUrl && (
                                   <button 
-                                    className="action-circle-btn preview"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setPreviewItem(item);
-                                    }}
-                                    title="Pratinjau Detail & Zoom"
+                                    className="action-btn"
+                                    onClick={(e) => { e.stopPropagation(); setPreviewItem(item); }}
+                                    title="Preview"
                                   >
                                     <Eye size={14} />
                                   </button>
+                                )}
+                                {item.status !== 'processing' && (
                                   <button 
-                                    className="action-circle-btn download"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDownloadBatchItem(item);
-                                    }}
-                                    title="Download Gambar HD"
+                                    className="action-btn delete"
+                                    onClick={(e) => { e.stopPropagation(); handleDeleteBatchItem(item.id); }}
+                                    title="Remove"
                                   >
-                                    <Download size={14} />
+                                    <Trash2 size={14} />
                                   </button>
-                                </>
-                              )}
-                              {!isProcessing && (
-                                <button 
-                                  className="action-circle-btn delete"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDeleteBatchItem(item.id);
-                                  }}
-                                  title="Hapus dari antrean"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
+                                )}
+                              </div>
                             </div>
 
-                          </div>
+                            <div className="card-info">
+                              <div className="card-name" title={item.name}>{item.name}</div>
+                              <div className="card-meta">
+                                <span>{item.width}×{item.height}</span>
+                                <span className="dot">·</span>
+                                <span>{item.size}</span>
+                              </div>
+                              <div className="card-footer">
+                                <div>
+                                  {item.status === 'pending' && <span className="status-tag pending">Pending</span>}
+                                  {item.status === 'processing' && <span className="status-tag processing">Processing</span>}
+                                  {item.status === 'done' && (
+                                    <span className="status-tag done">
+                                      <Check size={10} /> Done ({item.inferenceTime}s)
+                                    </span>
+                                  )}
+                                  {item.status === 'failed' && (
+                                    <span className="status-tag failed" title={item.error}>Failed</span>
+                                  )}
+                                </div>
 
-                          <div className="card-details">
-                            <div className="card-filename" title={item.name}>
-                              {item.name}
+                                {item.status === 'done' && item.resultUrl && (
+                                  <button 
+                                    className="card-download-btn"
+                                    onClick={(e) => { e.stopPropagation(); handleDownloadBatchItem(item); }}
+                                    title="Download Image"
+                                  >
+                                    <Download size={12} />
+                                  </button>
+                                )}
+                              </div>
                             </div>
-                            <div className="card-meta">
-                              <span>{item.width} × {item.height}</span>
-                              <span className="meta-dot">•</span>
-                              <span>{item.size}</span>
-                            </div>
-                            <div className="card-status-row">
-                              {isPending && <span className="status-badge pending">Menunggu</span>}
-                              {isProcessing && <span className="status-badge processing">Memproses</span>}
-                              {isDone && (
-                                <span className="status-badge done">
-                                  <Check size={10} />
-                                  <span>Selesai ({item.inferenceTime}s)</span>
-                                </span>
-                              )}
-                              {isFailed && (
-                                <span className="status-badge failed" title={item.error}>
-                                  Gagal
-                                </span>
-                              )}
-                            </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Sisi Kanan: Panel Kontrol Editor (Untuk Semua Gambar) */}
-                <div className="control-sidebar">
-                  
-                  {/* Seksi Kustomisasi Background */}
-                  <div className="glass-panel panel-section">
-                    <div className="section-title">
-                      <Palette size={18} />
-                      <span>Latar Belakang Global</span>
+                        ))}
+                      </div>
                     </div>
 
-                    {/* Tabs Tipe Background */}
-                    <div className="background-tabs">
-                      <button 
-                        className={`tab-btn ${bgType === 'transparent' ? 'active' : ''}`}
-                        onClick={() => setBgType('transparent')}
-                      >
-                        <ImageIcon size={14} />
-                        <span>Bening</span>
-                      </button>
-                      <button 
-                        className={`tab-btn ${bgType === 'color' ? 'active' : ''}`}
-                        onClick={() => setBgType('color')}
-                      >
-                        <Palette size={14} />
-                        <span>Warna</span>
-                      </button>
-                      <button 
-                        className={`tab-btn ${bgType === 'gradient' ? 'active' : ''}`}
-                        onClick={() => setBgType('gradient')}
-                      >
-                        <Sparkles size={14} />
-                        <span>Gradasi</span>
-                      </button>
-                      <button 
-                        className={`tab-btn ${bgType === 'image' ? 'active' : ''}`}
-                        onClick={() => setBgType('image')}
-                      >
-                        <FileImage size={14} />
-                        <span>Gambar</span>
-                      </button>
-                    </div>
-
-                    {/* Area Pilihan Preset */}
-                    <div className="background-options">
-                      {bgType === 'transparent' && (
-                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center', padding: '10px 0' }}>
-                          Seluruh gambar batch akan menggunakan latar belakang transparan (PNG HD).
-                        </p>
-                      )}
-
-                      {bgType === 'color' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          <div className="color-presets">
-                            {SOLID_PRESETS.map(color => (
-                              <div 
-                                key={color} 
-                                className={`color-circle ${bgColor === color ? 'active' : ''}`}
-                                style={{ backgroundColor: color }}
-                                onClick={() => setBgColor(color)}
-                              />
-                            ))}
-                          </div>
-                          <label className="custom-color-picker">
-                            <input 
-                              type="color" 
-                              value={bgColor} 
-                              onChange={(e) => setBgColor(e.target.value)}
-                              className="picker-input"
-                            />
-                            <span className="picker-text">Kustom: {bgColor}</span>
-                          </label>
-                        </div>
-                      )}
-
-                      {bgType === 'gradient' && (
-                        <div className="color-presets">
-                          {GRADIENT_PRESETS.map(grad => (
-                            <div 
-                              key={grad} 
-                              className={`color-circle ${bgGradient === grad ? 'active' : ''}`}
-                              style={{ backgroundImage: grad }}
-                              onClick={() => setBgGradient(grad)}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      {bgType === 'image' && (
-                        <div className="bg-image-picker">
-                          <div className="bg-image-thumbnails">
-                            {BG_IMAGE_PRESETS.map((preset, idx) => (
-                              <div 
-                                key={idx} 
-                                className={`bg-thumb ${bgImage === preset.url && !customBgImage ? 'active' : ''}`}
-                                style={{ backgroundImage: `url(${preset.url})` }}
-                                onClick={() => {
-                                  setBgImage(preset.url);
-                                  setCustomBgImage(null);
-                                }}
-                                title={preset.name}
-                              />
-                            ))}
-                            {customBgImage && (
-                              <div 
-                                className="bg-thumb active"
-                                style={{ backgroundImage: `url(${customBgImage})` }}
-                                title="Kustom"
-                              />
-                            )}
-                          </div>
-                          
-                          <input 
-                            type="file" 
-                            ref={bgImageInputRef} 
-                            onChange={handleBgImageUpload} 
-                            accept="image/*" 
-                            style={{ display: 'none' }}
-                          />
-                          <button className="bg-upload-btn" onClick={triggerBgImageUpload}>
-                            <Upload size={14} />
-                            <span>Unggah Gambar Background</span>
-                          </button>
-                        </div>
-                      )}
+                    {/* Right: Batch sidebar */}
+                    <div className="editor-sidebar">
+                      {renderBackgroundSection()}
+                      {renderSliderSection()}
+                      {renderBatchInfoSection()}
+                      {renderBatchActions()}
                     </div>
                   </div>
-
-                  {/* Seksi Fine-Tuning Pemotongan */}
-                  <div className="glass-panel panel-section">
-                    <div className="section-title">
-                      <Sliders size={18} />
-                      <span>Penyesuaian Tepi & Filter</span>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '20px', flexDirection: 'column' }}>
-                      <div className="slider-group">
-                        <div className="slider-label">
-                          <span>Feather (Kelembutan Tepi)</span>
-                          <span className="slider-value">{feather}px</span>
-                        </div>
-                        <input 
-                          type="range" 
-                          min="0" 
-                          max="25" 
-                          value={feather} 
-                          onChange={(e) => setFeather(Number(e.target.value))}
-                          className="input-slider"
-                        />
-                      </div>
-
-                      <div className="slider-group">
-                        <div className="slider-label">
-                          <span>Kecerahan Subjek</span>
-                          <span className="slider-value">{brightness}%</span>
-                        </div>
-                        <input 
-                          type="range" 
-                          min="60" 
-                          max="140" 
-                          value={brightness} 
-                          onChange={(e) => setBrightness(Number(e.target.value))}
-                          className="input-slider"
-                        />
-                      </div>
-
-                      <div className="slider-group">
-                        <div className="slider-label">
-                          <span>Kontras Subjek</span>
-                          <span className="slider-value">{contrast}%</span>
-                        </div>
-                        <input 
-                          type="range" 
-                          min="60" 
-                          max="140" 
-                          value={contrast} 
-                          onChange={(e) => setContrast(Number(e.target.value))}
-                          className="input-slider"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Seksi Ringkasan Kinerja Batch */}
-                  <div className="glass-panel panel-section">
-                    <div className="section-title">
-                      <Info size={18} />
-                      <span>Status Kinerja Antrean</span>
-                    </div>
-
-                    <div className="info-grid">
-                      <div className="info-item">
-                        <div className="info-label">Selesai</div>
-                        <div className="info-value">{batchItems.filter(item => item.status === 'done').length} / {batchItems.length}</div>
-                      </div>
-                      <div className="info-item">
-                        <div className="info-label">Rata-rata Waktu</div>
-                        <div className="info-value">
-                          {(() => {
-                            const completed = batchItems.filter(item => item.status === 'done' && item.inferenceTime);
-                            if (completed.length === 0) return '0.00s';
-                            const sum = completed.reduce((acc, curr) => acc + parseFloat(curr.inferenceTime!), 0);
-                            return (sum / completed.length).toFixed(2) + 's';
-                          })()}
-                        </div>
-                      </div>
-                      <div className="info-item">
-                        <div className="info-label">Mode AI</div>
-                        <div className="info-value" style={{ color: 'var(--success)' }}>HD (RMBG-1.4)</div>
-                      </div>
-                      <div className="info-item">
-                        <div className="info-label">Akselerasi</div>
-                        <div className="info-value">{activeBackend}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Tombol Aksi Ekspor Batch */}
-                  <div className="actions-container">
-                    <button 
-                      className="btn-primary" 
-                      onClick={handleDownloadAllZip}
-                      disabled={batchItems.filter(item => item.status === 'done').length === 0 || isZipping}
+                )
+              ) : (
+                /* ═══════════════════════════════════════
+                   SINGLE MODE
+                   ═══════════════════════════════════════ */
+                !image ? (
+                  /* Upload area */
+                  <div className="upload-zone">
+                    <div 
+                      className={`upload-card ${dragActive ? 'drag-active' : ''}`}
+                      onDragEnter={handleDrag}
+                      onDragLeave={handleDrag}
+                      onDragOver={handleDrag}
+                      onDrop={handleDrop}
+                      onClick={triggerFileInput}
                     >
-                      {isZipping ? (
-                        <div className="loading-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px', borderTopColor: 'white', marginRight: '6px' }} />
-                      ) : (
-                        <FileArchive size={18} />
-                      )}
-                      <span>{isZipping ? 'Mengompresi ZIP...' : `Unduh Berkas ZIP (${batchItems.filter(item => item.status === 'done').length} Foto)`}</span>
-                    </button>
-
-                    <button 
-                      className="btn-secondary" 
-                      onClick={handleDownloadAllBatch}
-                      disabled={batchItems.filter(item => item.status === 'done').length === 0 || isZipping}
-                      style={{ fontSize: '11px', padding: '8px 12px' }}
-                      title="Mengunduh satu per satu secara berurutan dengan jeda waktu"
-                    >
-                      <Download size={14} />
-                      <span>Unduh Satu per Satu (PNG)</span>
-                    </button>
-                    
-                    {batchItems.some(item => item.status === 'failed' || item.status === 'pending') && (
-                      <button 
-                        className="btn-secondary" 
-                        onClick={handleProcessAllBatch}
-                        disabled={batchProcessingIndex !== null || isZipping}
-                      >
-                        <Play size={14} />
-                        <span>{batchProcessingIndex !== null ? 'Sedang Memproses...' : 'Mulai Antrean'}</span>
-                      </button>
-                    )}
-
-                    <button 
-                      className="btn-secondary" 
-                      onClick={handleResetAllBatch}
-                      disabled={batchProcessingIndex !== null || isZipping}
-                      style={{ borderColor: 'rgba(239, 68, 68, 0.2)', color: '#ef4444' }}
-                    >
-                      <RefreshCw size={14} />
-                      <span>Bersihkan Semua</span>
-                    </button>
-                  </div>
-
-
-                </div>
-
-              </div>
-            )
-          ) : (
-            /* =======================================
-               WORKSPACE MODE TUNGGAL (EXISTING)
-               ======================================= */
-            !image ? (
-              /* Area Upload */
-              <div 
-                className={`glass-panel upload-wrapper ${dragActive ? 'drag-active' : ''}`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                onClick={triggerFileInput}
-              >
-                <div className="upload-icon-container">
-                  <Upload size={36} />
-                </div>
-                <div className="upload-text">
-                  <h3>Seret & Lepaskan Gambar</h3>
-                  <p>atau klik untuk menelusuri folder komputer Anda</p>
-                </div>
-                <div className="upload-limits">
-                  Mendukung PNG, JPEG, WEBP. Pemrosesan dilakukan 100% aman dan lokal di PC Anda.
-                </div>
-              </div>
-            ) : (
-              /* Workspace Utama */
-              <div className={`workspace-grid ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
-                <button 
-                  className={`sidebar-toggle-btn ${!isSidebarOpen ? 'collapsed' : ''}`}
-                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                  title={isSidebarOpen ? "Sembunyikan Sidebar" : "Tampilkan Sidebar"}
-                >
-                  {isSidebarOpen ? <PanelRightClose size={18} /> : <PanelRightOpen size={18} />}
-                </button>
-                
-                {/* Sisi Kiri: Canvas Viewport dengan Split Comparison */}
-                <div className="canvas-viewport transparent-checkerboard" style={{ padding: '0px', overflow: 'hidden' }}>
-                  
-                  {/* Image element tersembunyi untuk input asli */}
-                  <img 
-                    ref={originalImageRef}
-                    src={image.url} 
-                    alt="Original Hidden" 
-                    style={{ display: 'none' }}
-                    onLoad={drawComposite}
-                  />
-
-                  {processing ? (
-                    /* Loading State Saat Memotong */
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', zIndex: 10 }}>
-                      <div className="loading-spinner" style={{ width: '48px', height: '48px', borderWidth: '4px' }} />
-                      <p style={{ color: 'white', fontWeight: '600', textShadow: '0 2px 4px rgba(0,0,0,0.5)', fontSize: '15px' }}>
-                        {statusMessage || 'Mengekstraksi subjek...'}
-                      </p>
+                      <div className="upload-icon"><Upload size={32} /></div>
+                      <h3 className="upload-heading">Drag & Drop Image</h3>
+                      <p className="upload-sub">or click to browse your computer</p>
+                      <span className="upload-hint">PNG, JPEG, WEBP — 100% local processing</span>
                     </div>
-                  ) : (
-                    /* Before / After Split Slider */
-                    <div className="split-view-container">
-                      
-                      {/* Sisi Kiri (Gambar Asli): Ditampilkan di belakang dengan clipPath */}
-                      <div 
-                        className="split-image-left"
-                        style={{ clipPath: `polygon(0 0, ${compareSplit}% 0, ${compareSplit}% 100%, 0 100%)` }}
-                      >
-                        <img src={image.url} alt="Original Image" />
-                        <div className="image-label-badge label-before">Asli</div>
-                      </div>
-
-                      {/* Sisi Kanan (Hasil Potongan): Ditampilkan di atas dengan pemotongan lebar clip-path */}
-                      <div 
-                        className="split-image-right" 
-                        style={{ clipPath: `polygon(${compareSplit}% 0, 100% 0, 100% 100%, ${compareSplit}% 100%)` }}
-                      >
-                        <canvas ref={canvasRef} />
-                        <div className="image-label-badge label-after">Hasil</div>
-                      </div>
-
-                      {/* Batang Slider Handle Tengah */}
-                      <div className="slider-handle-bar" style={{ left: `${compareSplit}%` }}>
-                        <div className="slider-handle-button">
-                          <Eye size={18} />
-                        </div>
-                      </div>
-
-                      {/* Range Input Tak Terlihat untuk Kontrol Geser */}
-                      <input 
-                        type="range" 
-                        min="0" 
-                        max="100" 
-                        value={compareSplit} 
-                        onChange={(e) => setCompareSplit(Number(e.target.value))} 
-                        className="slider-range-input"
+                  </div>
+                ) : (
+                  /* Editor workspace */
+                  <div className={`editor-layout ${!isSidebarOpen ? 'sidebar-hidden' : ''}`}>
+                    {/* Left: Canvas viewport */}
+                    <div className="canvas-area checkerboard">
+                      {/* Hidden original image element */}
+                      <img 
+                        ref={originalImageRef}
+                        src={image.url} 
+                        alt="Original Hidden" 
+                        style={{ display: 'none' }}
+                        onLoad={drawComposite}
                       />
-                    </div>
-                  )}
-                </div>
 
-                {/* Sisi Kanan: Panel Kontrol Editor */}
-                <div className="control-sidebar">
-                  
-                  {/* Seksi Kustomisasi Background */}
-                  <div className="glass-panel panel-section">
-                    <div className="section-title">
-                      <Palette size={18} />
-                      <span>Latar Belakang</span>
-                    </div>
-
-                    {/* Tabs Tipe Background */}
-                    <div className="background-tabs">
-                      <button 
-                        className={`tab-btn ${bgType === 'transparent' ? 'active' : ''}`}
-                        onClick={() => setBgType('transparent')}
-                      >
-                        <ImageIcon size={14} />
-                        <span>Bening</span>
-                      </button>
-                      <button 
-                        className={`tab-btn ${bgType === 'color' ? 'active' : ''}`}
-                        onClick={() => setBgType('color')}
-                      >
-                        <Palette size={14} />
-                        <span>Warna</span>
-                      </button>
-                      <button 
-                        className={`tab-btn ${bgType === 'gradient' ? 'active' : ''}`}
-                        onClick={() => setBgType('gradient')}
-                      >
-                        <Sparkles size={14} />
-                        <span>Gradasi</span>
-                      </button>
-                      <button 
-                        className={`tab-btn ${bgType === 'image' ? 'active' : ''}`}
-                        onClick={() => setBgType('image')}
-                      >
-                        <FileImage size={14} />
-                        <span>Gambar</span>
-                      </button>
-                    </div>
-
-                    {/* Area Pilihan Preset Sesuai Tab Aktif */}
-                    <div className="background-options">
-                      {bgType === 'transparent' && (
-                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'center', padding: '10px 0' }}>
-                          Latar belakang akan disimpan transparan sepenuhnya (PNG HD).
-                        </p>
-                      )}
-
-                      {bgType === 'color' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          <div className="color-presets">
-                            {SOLID_PRESETS.map(color => (
-                              <div 
-                                key={color} 
-                                className={`color-circle ${bgColor === color ? 'active' : ''}`}
-                                style={{ backgroundColor: color }}
-                                onClick={() => setBgColor(color)}
-                              />
-                            ))}
-                          </div>
-                          <label className="custom-color-picker">
-                            <input 
-                              type="color" 
-                              value={bgColor} 
-                              onChange={(e) => setBgColor(e.target.value)}
-                              className="picker-input"
-                            />
-                            <span className="picker-text">Kustom: {bgColor}</span>
-                          </label>
+                      {processing ? (
+                        <div className="canvas-processing">
+                          <div className="loading-spinner" />
+                          <p>{statusMessage || 'Extracting subject...'}</p>
                         </div>
-                      )}
-
-                      {bgType === 'gradient' && (
-                        <div className="color-presets">
-                          {GRADIENT_PRESETS.map(grad => (
-                            <div 
-                              key={grad} 
-                              className={`color-circle ${bgGradient === grad ? 'active' : ''}`}
-                              style={{ backgroundImage: grad }}
-                              onClick={() => setBgGradient(grad)}
-                            />
-                          ))}
-                        </div>
-                      )}
-
-                      {bgType === 'image' && (
-                        <div className="bg-image-picker">
-                          <div className="bg-image-thumbnails">
-                            {BG_IMAGE_PRESETS.map((preset, idx) => (
-                              <div 
-                                key={idx} 
-                                className={`bg-thumb ${bgImage === preset.url && !customBgImage ? 'active' : ''}`}
-                                style={{ backgroundImage: `url(${preset.url})` }}
-                                onClick={() => {
-                                  setBgImage(preset.url);
-                                  setCustomBgImage(null);
-                                }}
-                                title={preset.name}
-                              />
-                            ))}
-                            {customBgImage && (
-                              <div 
-                                className="bg-thumb active"
-                                style={{ backgroundImage: `url(${customBgImage})` }}
-                                title="Kustom"
-                              />
-                            )}
+                      ) : (
+                        /* Before / After Split Slider */
+                        <div className="split-container">
+                          <div 
+                            className="split-left"
+                            style={{ clipPath: `polygon(0 0, ${compareSplit}% 0, ${compareSplit}% 100%, 0 100%)` }}
+                          >
+                            <img src={image.url} alt="Original" />
+                            <span className="split-label split-label-before">Original</span>
                           </div>
-                          
+
+                          <div 
+                            className="split-right" 
+                            style={{ clipPath: `polygon(${compareSplit}% 0, 100% 0, 100% 100%, ${compareSplit}% 100%)` }}
+                          >
+                            <canvas ref={canvasRef} />
+                            <span className="split-label split-label-after">Result</span>
+                          </div>
+
+                          <div className="split-divider" style={{ left: `${compareSplit}%` }}>
+                            <div className="split-handle">
+                              <Eye size={14} />
+                            </div>
+                          </div>
+
                           <input 
-                            type="file" 
-                            ref={bgImageInputRef} 
-                            onChange={handleBgImageUpload} 
-                            accept="image/*" 
-                            style={{ display: 'none' }}
+                            type="range" 
+                            min="0" max="100" 
+                            value={compareSplit} 
+                            onChange={(e) => setCompareSplit(Number(e.target.value))} 
+                            className="split-range-input"
                           />
-                          <button className="bg-upload-btn" onClick={triggerBgImageUpload}>
-                            <Upload size={14} />
-                            <span>Unggah Gambar Background</span>
-                          </button>
                         </div>
                       )}
                     </div>
-                  </div>
 
-                  {/* Seksi Fine-Tuning Pemotongan */}
-                  <div className="glass-panel panel-section">
-                    <div className="section-title">
-                      <Sliders size={18} />
-                      <span>Penyesuaian Tepi & Filter</span>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '20px', flexDirection: 'column' }}>
-                      {/* Feathering (Edge soften) */}
-                      <div className="slider-group">
-                        <div className="slider-label">
-                          <span>Feather (Kelembutan Tepi)</span>
-                          <span className="slider-value">{feather}px</span>
-                        </div>
-                        <input 
-                          type="range" 
-                          min="0" 
-                          max="25" 
-                          value={feather} 
-                          onChange={(e) => setFeather(Number(e.target.value))}
-                          className="input-slider"
-                        />
-                      </div>
-
-                      {/* Brightness */}
-                      <div className="slider-group">
-                        <div className="slider-label">
-                          <span>Kecerahan Subjek</span>
-                          <span className="slider-value">{brightness}%</span>
-                        </div>
-                        <input 
-                          type="range" 
-                          min="60" 
-                          max="140" 
-                          value={brightness} 
-                          onChange={(e) => setBrightness(Number(e.target.value))}
-                          className="input-slider"
-                        />
-                      </div>
-
-                      {/* Contrast */}
-                      <div className="slider-group">
-                        <div className="slider-label">
-                          <span>Kontras Subjek</span>
-                          <span className="slider-value">{contrast}%</span>
-                        </div>
-                        <input 
-                          type="range" 
-                          min="60" 
-                          max="140" 
-                          value={contrast} 
-                          onChange={(e) => setContrast(Number(e.target.value))}
-                          className="input-slider"
-                        />
-                      </div>
+                    {/* Right: Editor sidebar */}
+                    <div className="editor-sidebar">
+                      {renderBackgroundSection()}
+                      {renderSliderSection()}
+                      {renderSingleInfoSection()}
+                      {renderSingleActions()}
                     </div>
                   </div>
-
-                  {/* Informasi Gambar & Performa */}
-                  <div className="glass-panel panel-section">
-                    <div className="section-title">
-                      <Info size={18} />
-                      <span>Detail & Kinerja</span>
-                    </div>
-
-                    <div className="info-grid">
-                      <div className="info-item">
-                        <div className="info-label">Resolusi Asli</div>
-                        <div className="info-value">{image.width} × {image.height}</div>
-                      </div>
-                      <div className="info-item">
-                        <div className="info-label">Inference Time</div>
-                        <div className="info-value">{inferenceTime ? `${inferenceTime}s` : 'Mengevaluasi...'}</div>
-                      </div>
-                      <div className="info-item">
-                        <div className="info-label">Ukuran Gambar</div>
-                        <div className="info-value">{image.size}</div>
-                      </div>
-                      <div className="info-item">
-                        <div className="info-label">Mode AI</div>
-                        <div className="info-value" style={{ color: 'var(--success)' }}>HD (RMBG-1.4)</div>
-                      </div>
-                      {mask && (
-                        <div className="info-item" style={{ gridColumn: 'span 2' }}>
-                          <div className="info-label">Diagnostik Mask</div>
-                          <div className="info-value" style={{ fontSize: '11px', wordBreak: 'break-all', fontFamily: 'monospace' }}>
-                            Len: {mask.data.length} | Dim: {mask.width}x{mask.height} | Min/Max: {Math.min(...Array.from(mask.data.slice(0, 500)))}/{Math.max(...Array.from(mask.data.slice(0, 500)))} | Sample: [{Array.from(mask.data.slice(0, 5)).join(', ')}]
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Tombol Aksi Ekspor */}
-                  <div className="actions-container">
-                    <button 
-                      className="btn-primary" 
-                      onClick={handleDownload}
-                      disabled={processing}
-                    >
-                      <Download size={18} />
-                      <span>Download Gambar HD (PNG)</span>
-                    </button>
-                    <button 
-                      className="btn-secondary" 
-                      onClick={handleReset}
-                      disabled={processing}
-                    >
-                      <RefreshCw size={14} />
-                      <span>Unggah Gambar Baru</span>
-                    </button>
-                  </div>
-
-                </div>
-
-              </div>
-            )
+                )
+              )}
+            </>
           )}
-        </>
-      )}
+        </div>
+      </main>
 
-      {/* Modal Preview Batch & Zoom */}
+      {/* ── PREVIEW MODAL ── */}
       {previewItem && (
-        <div className="preview-modal-overlay" onClick={() => setPreviewItem(null)}>
-          <div className="preview-modal-content glass-panel" onClick={(e) => e.stopPropagation()}>
-            <div className="preview-modal-header">
-              <div className="preview-modal-title">
-                <h3>Pratinjau Detail: {previewItem.name}</h3>
-                <p>{previewItem.width} × {previewItem.height} • {previewItem.size}</p>
+        <div className="modal-overlay" onClick={() => setPreviewItem(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-title">
+                <h3>{previewItem.name}</h3>
+                <p>{previewItem.width}×{previewItem.height} · {previewItem.size}</p>
               </div>
-              <button className="preview-modal-close" onClick={() => setPreviewItem(null)}>
+              <button className="modal-close" onClick={() => setPreviewItem(null)}>
                 &times;
               </button>
             </div>
             
-            <div className="preview-modal-body">
-              {/* Viewport Gambar (Scroll & Pan) */}
+            <div className="modal-body">
               <div 
                 ref={previewViewportRef}
-                className="preview-image-viewport transparent-checkerboard"
+                className="modal-viewport checkerboard"
                 onMouseDown={(e) => {
                   if (zoomScale <= 1) return;
                   setIsPanning(true);
-                  setPanStart({
-                    x: e.clientX - panOffset.x,
-                    y: e.clientY - panOffset.y
-                  });
+                  setPanStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
                 }}
                 onMouseMove={(e) => {
                   if (!isPanning) return;
-                  setPanOffset({
-                    x: e.clientX - panStart.x,
-                    y: e.clientY - panStart.y
-                  });
+                  setPanOffset({ x: e.clientX - panStart.x, y: e.clientY - panStart.y });
                 }}
                 onMouseUp={() => setIsPanning(false)}
                 onMouseLeave={() => setIsPanning(false)}
@@ -1772,41 +1238,26 @@ export default function App() {
                     const x = e.clientX - left;
                     const y = e.clientY - top;
                     setZoomScale(2.5);
-                    setPanOffset({
-                      x: (width / 2 - x) * 1.5,
-                      y: (height / 2 - y) * 1.5
-                    });
+                    setPanOffset({ x: (width / 2 - x) * 1.5, y: (height / 2 - y) * 1.5 });
                   }
                 }}
                 style={{ 
-                  position: 'relative', 
                   cursor: zoomScale > 1 ? (isPanning ? 'grabbing' : 'grab') : 'zoom-in',
-                  overflow: 'hidden'
                 }}
-                title={zoomScale > 1 ? "Klik & geser untuk memindahkan gambar" : "Klik ganda untuk memperbesar"}
               >
                 <img 
                   src={previewItem.resultUrl || previewItem.url} 
-                  alt="Pratinjau HD"
-                  className="preview-large-img"
+                  alt="Preview"
                   style={{ 
-                    display: 'block', 
-                    maxWidth: '100%', 
-                    maxHeight: '65vh', 
-                    margin: '0 auto', 
-                    objectFit: 'contain',
                     transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomScale})`,
                     transformOrigin: 'center center',
                     transition: isPanning ? 'none' : 'transform 0.15s ease-out',
-                    userSelect: 'none',
-                    pointerEvents: 'none'
                   }}
                 />
                 
-                {/* Floating Zoom Controls at Bottom Center */}
-                <div className="zoom-controls-floating">
+                <div className="zoom-bar">
                   <button 
-                    className="btn-zoom"
+                    className="zoom-btn"
                     onClick={(e) => {
                       e.stopPropagation();
                       setZoomScale(prev => {
@@ -1816,17 +1267,14 @@ export default function App() {
                       });
                     }}
                     disabled={zoomScale <= 1}
-                    title="Zoom Out"
                   >
-                    <ZoomOut size={16} />
+                    <ZoomOut size={14} />
                   </button>
                   
                   <input 
                     type="range" 
-                    className="preview-zoom-slider"
-                    min="1" 
-                    max="5" 
-                    step="0.1" 
+                    className="zoom-slider"
+                    min="1" max="5" step="0.1" 
                     value={zoomScale}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value);
@@ -1837,38 +1285,285 @@ export default function App() {
                   />
                   
                   <button 
-                    className="btn-zoom"
+                    className="zoom-btn"
                     onClick={(e) => {
                       e.stopPropagation();
                       setZoomScale(prev => Math.min(prev + 0.25, 5));
                     }}
                     disabled={zoomScale >= 5}
-                    title="Zoom In"
                   >
-                    <ZoomIn size={16} />
+                    <ZoomIn size={14} />
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="preview-modal-footer">
+            <div className="modal-footer">
               <button 
                 className="btn-primary" 
-                onClick={() => {
-                  handleDownloadBatchItem(previewItem);
-                }}
+                onClick={() => handleDownloadBatchItem(previewItem)}
               >
-                <Download size={16} />
-                <span>Unduh Gambar HD (PNG)</span>
+                <Download size={14} />
+                <span>Download HD Image (PNG)</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* ── FOOTER ── */}
       <footer>
-        <p>© 2026 RemoveBang. Dibuat oleh <strong>Tio (Ajit Prasetiyo)</strong>. Didukung oleh <a href="https://huggingface.co/briaai/RMBG-1.4" target="_blank" rel="noreferrer">Bria AI RMBG-1.4</a> & Transformers.js.</p>
+        <p>© 2026 RemoveBang. Built by <strong>Tio (Ajit Prasetiyo)</strong>. Powered by <a href="https://huggingface.co/briaai/RMBG-1.4" target="_blank" rel="noreferrer">Bria AI RMBG-1.4</a> & Transformers.js.</p>
       </footer>
     </div>
   );
+
+  // ─── RENDER HELPERS ─────────────────────────────────────────────────
+
+  function renderBackgroundSection() {
+    return (
+      <div className="sidebar-section">
+        <div className="section-header">
+          <Palette size={16} />
+          <span>Background</span>
+        </div>
+
+        <div className="bg-tabs">
+          <button className={`bg-tab ${bgType === 'transparent' ? 'active' : ''}`} onClick={() => setBgType('transparent')}>
+            <ImageIcon size={12} /><span>None</span>
+          </button>
+          <button className={`bg-tab ${bgType === 'color' ? 'active' : ''}`} onClick={() => setBgType('color')}>
+            <Palette size={12} /><span>Color</span>
+          </button>
+          <button className={`bg-tab ${bgType === 'gradient' ? 'active' : ''}`} onClick={() => setBgType('gradient')}>
+            <Sparkles size={12} /><span>Gradient</span>
+          </button>
+          <button className={`bg-tab ${bgType === 'image' ? 'active' : ''}`} onClick={() => setBgType('image')}>
+            <FileImage size={12} /><span>Image</span>
+          </button>
+        </div>
+
+        <div className="bg-options">
+          {bgType === 'transparent' && (
+            <p className="bg-note">Transparent background (PNG HD)</p>
+          )}
+
+          {bgType === 'color' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="swatch-grid">
+                {SOLID_PRESETS.map(color => (
+                  <div 
+                    key={color} 
+                    className={`swatch ${bgColor === color ? 'active' : ''}`}
+                    style={{ backgroundColor: color, border: color === '#FFFFFF' ? '1px solid var(--hairline)' : undefined }}
+                    onClick={() => setBgColor(color)}
+                  />
+                ))}
+              </div>
+              <label className="color-picker-row">
+                <input type="color" value={bgColor} onChange={(e) => setBgColor(e.target.value)} />
+                <span>{bgColor}</span>
+              </label>
+            </div>
+          )}
+
+          {bgType === 'gradient' && (
+            <div className="swatch-grid">
+              {GRADIENT_PRESETS.map(grad => (
+                <div 
+                  key={grad} 
+                  className={`swatch ${bgGradient === grad ? 'active' : ''}`}
+                  style={{ backgroundImage: grad }}
+                  onClick={() => setBgGradient(grad)}
+                />
+              ))}
+            </div>
+          )}
+
+          {bgType === 'image' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div className="bg-thumbs">
+                {BG_IMAGE_PRESETS.map((preset, idx) => (
+                  <div 
+                    key={idx} 
+                    className={`bg-thumb ${bgImage === preset.url && !customBgImage ? 'active' : ''}`}
+                    style={{ backgroundImage: `url(${preset.url})` }}
+                    onClick={() => { setBgImage(preset.url); setCustomBgImage(null); }}
+                    title={preset.name}
+                  />
+                ))}
+                {customBgImage && (
+                  <div className="bg-thumb active" style={{ backgroundImage: `url(${customBgImage})` }} title="Custom" />
+                )}
+              </div>
+              <button className="bg-upload-btn" onClick={triggerBgImageUpload}>
+                <Upload size={12} />
+                <span>Upload Background</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  function renderSliderSection() {
+    return (
+      <div className="sidebar-section">
+        <div className="section-header">
+          <Sliders size={16} />
+          <span>Adjustments</span>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="slider-group">
+            <div className="slider-row">
+              <span>Feather</span>
+              <span className="slider-val">{feather}px</span>
+            </div>
+            <input type="range" min="0" max="25" value={feather} onChange={(e) => setFeather(Number(e.target.value))} className="range-input" />
+          </div>
+
+          <div className="slider-group">
+            <div className="slider-row">
+              <span>Brightness</span>
+              <span className="slider-val">{brightness}%</span>
+            </div>
+            <input type="range" min="60" max="140" value={brightness} onChange={(e) => setBrightness(Number(e.target.value))} className="range-input" />
+          </div>
+
+          <div className="slider-group">
+            <div className="slider-row">
+              <span>Contrast</span>
+              <span className="slider-val">{contrast}%</span>
+            </div>
+            <input type="range" min="60" max="140" value={contrast} onChange={(e) => setContrast(Number(e.target.value))} className="range-input" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderSingleInfoSection() {
+    return (
+      <div className="sidebar-section">
+        <div className="section-header">
+          <Info size={16} />
+          <span>Details</span>
+        </div>
+
+        <div className="info-grid">
+          <div className="info-cell">
+            <div className="info-label">Resolution</div>
+            <div className="info-value">{image!.width}×{image!.height}</div>
+          </div>
+          <div className="info-cell">
+            <div className="info-label">Inference</div>
+            <div className="info-value">{inferenceTime ? `${inferenceTime}s` : '—'}</div>
+          </div>
+          <div className="info-cell">
+            <div className="info-label">File Size</div>
+            <div className="info-value">{image!.size}</div>
+          </div>
+          <div className="info-cell">
+            <div className="info-label">Model</div>
+            <div className="info-value success">RMBG-1.4</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderSingleActions() {
+    return (
+      <div className="actions-stack">
+        <button className="btn-primary" onClick={handleDownload} disabled={processing}>
+          <Download size={14} />
+          <span>Download HD Image (PNG)</span>
+        </button>
+        <button className="btn-secondary" onClick={handleReset} disabled={processing}>
+          <RefreshCw size={14} />
+          <span>Upload New Image</span>
+        </button>
+      </div>
+    );
+  }
+
+  function renderBatchInfoSection() {
+    const completed = batchItems.filter(i => i.status === 'done');
+    const avgTime = completed.length > 0
+      ? (completed.reduce((acc, curr) => acc + parseFloat(curr.inferenceTime || '0'), 0) / completed.length).toFixed(2) + 's'
+      : '—';
+
+    return (
+      <div className="sidebar-section">
+        <div className="section-header">
+          <Info size={16} />
+          <span>Queue Status</span>
+        </div>
+
+        <div className="info-grid">
+          <div className="info-cell">
+            <div className="info-label">Completed</div>
+            <div className="info-value">{completed.length} / {batchItems.length}</div>
+          </div>
+          <div className="info-cell">
+            <div className="info-label">Avg Time</div>
+            <div className="info-value">{avgTime}</div>
+          </div>
+          <div className="info-cell">
+            <div className="info-label">Model</div>
+            <div className="info-value success">RMBG-1.4</div>
+          </div>
+          <div className="info-cell">
+            <div className="info-label">Backend</div>
+            <div className="info-value">{activeBackend}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderBatchActions() {
+    const completedCount = batchItems.filter(i => i.status === 'done').length;
+    const hasPendingOrFailed = batchItems.some(i => i.status === 'failed' || i.status === 'pending');
+
+    return (
+      <div className="actions-stack">
+        <button 
+          className="btn-primary" 
+          onClick={handleDownloadAllZip}
+          disabled={completedCount === 0 || isZipping}
+        >
+          {isZipping ? (
+            <div className="loading-spinner" style={{ width: '14px', height: '14px', borderWidth: '2px', borderTopColor: 'var(--on-primary)' }} />
+          ) : (
+            <FileArchive size={14} />
+          )}
+          <span>{isZipping ? 'Compressing...' : `Download ZIP (${completedCount})`}</span>
+        </button>
+
+        
+        {hasPendingOrFailed && (
+          <button 
+            className="btn-secondary btn-sm" 
+            onClick={handleProcessAllBatch}
+            disabled={batchProcessingIndex !== null || isZipping}
+          >
+            <Play size={12} />
+            <span>{batchProcessingIndex !== null ? 'Processing...' : 'Start Queue'}</span>
+          </button>
+        )}
+
+        <button 
+          className="btn-secondary btn-sm btn-danger" 
+          onClick={handleResetAllBatch}
+          disabled={batchProcessingIndex !== null || isZipping}
+        >
+          <RefreshCw size={12} />
+          <span>Clear All</span>
+        </button>
+      </div>
+    );
+  }
 }

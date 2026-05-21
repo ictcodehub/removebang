@@ -22,7 +22,7 @@ self.onmessage = async (event: MessageEvent) => {
         device = 'webgpu';
       }
 
-      self.postMessage({ type: 'status', message: `Menginisialisasi model dengan backend: ${device.toUpperCase()}...` });
+      self.postMessage({ type: 'status', message: `Initializing model with backend: ${device.toUpperCase()}...` });
 
       // Memuat config model terlebih dahulu untuk mengubah model_type menjadi 'isnet'
       // sebagai solusi dari ketidakcocokan tipe model di Hugging Face ('SegformerForSemanticSegmentation')
@@ -52,9 +52,9 @@ self.onmessage = async (event: MessageEvent) => {
         });
       } catch (gpuError: any) {
         if (device === 'webgpu') {
-          console.warn('Gagal memuat menggunakan WebGPU, beralih ke WASM...', gpuError);
+          console.warn('Failed to load using WebGPU, switching to WASM...', gpuError);
           device = 'wasm';
-          self.postMessage({ type: 'status', message: 'WebGPU gagal terinisialisasi. Beralih ke backend WASM...' });
+          self.postMessage({ type: 'status', message: 'WebGPU failed to initialize. Switching to WASM backend...' });
           
           segmentator = await pipeline('image-segmentation', 'briaai/RMBG-1.4', {
             config,
@@ -83,18 +83,18 @@ self.onmessage = async (event: MessageEvent) => {
 
       self.postMessage({ type: 'ready', device });
     } catch (error: any) {
-      console.error('Gagal memuat model:', error);
-      self.postMessage({ type: 'error', error: error.message || 'Gagal memuat model AI.' });
+      console.error('Failed to load model:', error);
+      self.postMessage({ type: 'error', error: error.message || 'Failed to load AI model.' });
     }
   }
 
   else if (type === 'process') {
     try {
       if (!segmentator) {
-        throw new Error('Model belum dimuat. Silakan muat model terlebih dahulu.');
+        throw new Error('Model is not loaded. Please load the model first.');
       }
 
-      self.postMessage({ type: 'status', message: 'Memproses gambar (menghapus background)...' });
+      self.postMessage({ type: 'status', message: 'Processing image (removing background)...' });
 
       // Load raw image dari blob
       const url = URL.createObjectURL(imageBlob);
@@ -112,7 +112,7 @@ self.onmessage = async (event: MessageEvent) => {
       const mask = Array.isArray(output) ? output[0].mask : output.mask;
 
       if (!mask) {
-        throw new Error('Tidak dapat mengekstrak mask dari output model AI.');
+        throw new Error('Could not extract mask from AI model output.');
       }
 
       // Kirim hasil mask kembali ke main thread
@@ -126,8 +126,8 @@ self.onmessage = async (event: MessageEvent) => {
       });
 
     } catch (error: any) {
-      console.error('Gagal memproses gambar:', error);
-      self.postMessage({ type: 'error', error: error.message || 'Gagal memproses gambar.' });
+      console.error('Failed to process image:', error);
+      self.postMessage({ type: 'error', error: error.message || 'Failed to process image.' });
     }
   }
 };
