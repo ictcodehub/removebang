@@ -862,7 +862,7 @@ export default function App() {
       <header>
         <div className="brand">
           <div className="brand-logo">
-            <img src="/icon.jpg" alt="RemoveBang Logo" style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'contain' }} />
+            <img src="icon.jpg" alt="RemoveBang Logo" style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'contain' }} />
           </div>
           <div className="brand-text">
             <h1 className="neon-text">RemoveBang</h1>
